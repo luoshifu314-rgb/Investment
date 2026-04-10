@@ -14,8 +14,8 @@ from collections import defaultdict
 import requests
 
 # ─── 配置 ───
-TG_TOKEN = os.environ.get("TG_TOKEN", "8706943976:AAFHmegbegMAYeG0-iZpyEqp69_StQl-iFQ")
-TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "8410634590")
+TG_TOKEN = os.environ.get("TG_TOKEN", "")
+TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "")
 TG_CHANNEL = os.environ.get("TG_CHANNEL", "")
 CREDITS_TOTAL = int(os.environ.get("CREDITS_TOTAL", "10000"))
 CREDITS_DAILY = int(os.environ.get("CREDITS_DAILY", "500"))
