@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股利好监控面板</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg-primary:#0a0e17;--bg-card:#111827;--bg-card-hover:#1a2332;--border:#1e293b;--text-primary:#e2e8f0;--text-secondary:#94a3b8;--text-muted:#64748b;--red:#ef4444;--red-glow:#ef444440;--green:#22c55e;--green-glow:#22c55e40;--gold:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;--accent:#06b6d4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans SC','JetBrains Mono',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden}
+.mono{font-family:'JetBrains Mono',monospace}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;transition:all .2s}
+.card:hover{background:var(--bg-card-hover);border-color:#334155}
+.glow-red{box-shadow:0 0 20px var(--red-glow)}
+.glow-green{box-shadow:0 0 20px var(--green-glow)}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.tag-s{background:#ef444430;color:#ef4444;border:1px solid #ef444450}
+.tag-a{background:#f59e0b30;color:#f59e0b;border:1px solid #f59e0b50}
+.tag-b{background:#3b82f630;color:#3b82f6;border:1px solid #3b82f650}
+.tag-c{background:#64748b30;color:#94a3b8;border:1px solid #64748b50}
+.scrollbar::-webkit-scrollbar{width:4px}
+.scrollbar::-webkit-scrollbar-track{background:transparent}
+.scrollbar::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+.pulse{animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.fade-in{animation:fadeIn .5s ease-out}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.topbar{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);border-bottom:1px solid var(--border)}
+.stat-box{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px 16px}
+.hot-rank{background:linear-gradient(135deg,var(--red) 0%,#dc2626 100%);color:white;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.news-item{border-left:3px solid transparent;padding-left:12px;transition:all .2s}
+.news-item:hover{border-left-color:var(--accent);background:rgba(6,182,212,0.05)}
+.news-item.bull{border-left-color:var(--red)}
+.news-item.bear{border-left-color:var(--green)}
+</style>
+<script>
+tailwind.config={theme:{extend:{colors:{primary:'#0a0e17',card:'#111827'}}}}
+</script>
+</head>
+<body>
+<!-- 顶栏 -->
+<div class="topbar sticky top-0 z-50 px-4 py-3">
+<div class="max-w-[1600px] mx-auto flex items-center justify-between flex-wrap gap-3">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold text-sm">A</div>
+    <div>
+      <h1 class="text-lg font-bold text-white leading-tight">A股利好监控</h1>
+      <p class="text-xs text-slate-400">2026-04-10 03:23:55</p>
+    </div>
+    <span class="pulse w-2 h-2 rounded-full bg-green-400 ml-1"></span>
+  </div>
+  <div class="flex items-center gap-3 flex-wrap">
+    <div class="stat-box flex items-center gap-2">
+      <span class="text-xs text-slate-400">新闻</span>
+      <span class="mono text-sm font-bold text-cyan-400">217</span>
+    </div>
+    <div class="stat-box flex items-center gap-2">
+      <span class="text-xs text-slate-400">利好</span>
+      <span class="mono text-sm font-bold text-red-400">96</span>
+    </div>
+    <div class="stat-box flex items-center gap-2">
+      <span class="text-xs text-slate-400">耗时</span>
+      <span class="mono text-sm text-slate-300">25.4s</span>
+    </div>
+    <div class="stat-box flex items-center gap-2">
+      <span class="text-xs text-slate-400">API</span>
+      <span class="mono text-sm text-slate-300">23</span>
+    </div>
+    <div class="stat-box flex items-center gap-2">
+      <span class="text-xs text-slate-400">Credits</span>
+      <span class="mono text-sm text-amber-400">477/500</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- 主体 -->
+<div class="max-w-[1600px] mx-auto p-4">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+<!-- 左列: Hot7 + 板块ETF -->
+<div class="space-y-4">
+
+  <!-- Hot7 热点股 -->
+  <div class="card p-4 fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-bold flex items-center gap-2">
+        <span class="text-red-400">🔥</span> Hot7 热点股
+      </h2>
+      <span class="tag tag-s">TOP 7</span>
+    </div>
+    <div class="space-y-3" id="hot7-list"></div>
+  </div>
+
+  <!-- 板块 ETF -->
+  <div class="card p-4 fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-bold flex items-center gap-2">
+        <span class="text-blue-400">📋</span> 热门板块 & ETF
+      </h2>
+    </div>
+    <div class="space-y-2" id="sector-list"></div>
+    <div id="sector-chart" style="height:220px;margin-top:12px"></div>
+  </div>
+
+</div>
+
+<!-- 中列: 实时利好精选 -->
+<div class="space-y-4">
+  <div class="card p-4 fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-bold flex items-center gap-2">
+        <span class="text-amber-400">⚡</span> 实时利好精选
+      </h2>
+      <span class="mono text-xs text-slate-400">20 只</span>
+    </div>
+    <div class="space-y-2 scrollbar overflow-y-auto" style="max-height:calc(100vh - 200px)" id="picks-list"></div>
+  </div>
+</div>
+
+<!-- 右列: 新闻流 -->
+<div class="space-y-4">
+  <div class="card p-4 fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-bold flex items-center gap-2">
+        <span class="text-cyan-400">📰</span> 新闻流
+      </h2>
+      <div class="flex gap-2">
+        <button onclick="filterNews('all')" class="tag tag-c hover:opacity-80 cursor-pointer" id="btn-all">全部</button>
+        <button onclick="filterNews('bull')" class="tag tag-s hover:opacity-80 cursor-pointer" id="btn-bull">利好</button>
+        <button onclick="filterNews('bear')" class="tag tag-b hover:opacity-80 cursor-pointer" id="btn-bear">利空</button>
+      </div>
+    </div>
+    <div class="space-y-1 scrollbar overflow-y-auto" style="max-height:calc(100vh - 200px)" id="news-list"></div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script>
+// 数据注入
+const hot7Data = [{"code": "002328", "name": "新朋股份", "price": 10.11, "change_pct": 10.01, "count": 3, "score": 5.9, "streak": 5}, {"code": "002738", "name": "中矿资源", "price": 76.91, "change_pct": -1.4, "count": 2, "score": 5.9, "streak": 4}, {"code": "300547", "name": "川环科技", "price": 41.54, "change_pct": 0.31, "count": 2, "score": 4.6, "streak": 0}, {"code": "002536", "name": "飞龙股份", "price": 35.25, "change_pct": 5.04, "count": 2, "score": 4.6, "streak": 4}, {"code": "002580", "name": "圣阳股份", "price": 18.78, "change_pct": 8.87, "count": 2, "score": 4.2, "streak": 2}, {"code": "300207", "name": "欣旺达", "price": 29.13, "change_pct": 16.71, "count": 2, "score": 3.6, "streak": 4}, {"code": "001283", "name": "豪鹏科技", "price": 69.91, "change_pct": 8.05, "count": 2, "score": 3.6, "streak": 1}];
+const picksData = [{"code": "603773", "name": "沃格光电", "price": 43.14, "change_pct": 9.99, "streak": 0, "news_score": 3.3, "combined": 5.54, "level": "S", "title": "CPO等算力硬件股再度拉升，新易盛盘中创新高", "ctime": 1775786880, "volume": 297600.0, "amount": 124704.0}, {"code": "688573", "name": "信宇人", "price": 23.29, "change_pct": 19.99, "streak": 0, "news_score": 2.3, "combined": 5.49, "level": "S", "title": "电池产业链盘初大幅拉升，国轩高科等股涨停", "ctime": 1775785258, "volume": 4747580.0, "amount": 10663.0}, {"code": "688183", "name": "生益电子", "price": 96.35, "change_pct": 8.27, "streak": 0, "news_score": 3.3, "combined": 5.07, "level": "S", "title": "CPO等算力硬件股再度拉升，新易盛盘中创新高", "ctime": 1775786880, "volume": 23793290.0, "amount": 226877.0}, {"code": "300207", "name": "欣旺达", "price": 29.13, "change_pct": 16.71, "streak": 4, "news_score": 2.3, "combined": 4.89, "level": "S", "title": "电池产业链盘初大幅拉升，国轩高科等股涨停", "ctime": 1775785258, "volume": 2278046.0, "amount": 655506.0}, {"code": "301393", "name": "昊帆生物", "price": 56.05, "change_pct": 12.98, "streak": 0, "news_score": 2.3, "combined": 4.8, "level": "S", "title": "创新药板块短线拉升，哈三联直线涨停", "ctime": 1775789026, "volume": 46885.0, "amount": 25092.0}, {"code": "300308", "name": "中际旭创", "price": 715.22, "change_pct": 3.2, "streak": 0, "news_score": 3.3, "combined": 3.66, "level": "A", "title": "CPO等算力硬件股再度拉升，新易盛盘中创新高", "ctime": 1775786880, "volume": 182066.0, "amount": 1294527.0}, {"code": "300502", "name": "新易盛", "price": 505.5, "change_pct": 3.16, "streak": 0, "news_score": 3.3, "combined": 3.65, "level": "A", "title": "CPO等算力硬件股再度拉升，新易盛盘中创新高", "ctime": 1775786880, "volume": 236721.0, "amount": 1179403.0}, {"code": "300068", "name": "南都电源", "price": 12.65, "change_pct": 9.81, "streak": 0, "news_score": 2.3, "combined": 3.62, "level": "A", "title": "电池产业链盘初大幅拉升，国轩高科等股涨停", "ctime": 1775785258, "volume": 1018924.0, "amount": 129026.0}, {"code": "601999", "name": "出版传媒", "price": 8.46, "change_pct": 10.01, "streak": 0, "news_score": 2.0, "combined": 3.58, "level": "A", "title": "文化传媒板块短线拉升，出版传媒触及涨停", "ctime": 1775788594, "volume": 205282.0, "amount": 16682.0}, {"code": "600749", "name": "西藏旅游", "price": 17.44, "change_pct": 10.03, "streak": 0, "news_score": 2.0, "combined": 3.52, "level": "A", "title": "旅游及酒店板块短线拉升，西藏旅游涨停", "ctime": 1775788160, "volume": 155944.0, "amount": 26653.0}, {"code": "300390", "name": "天华新能", "price": 67.46, "change_pct": 8.81, "streak": 0, "news_score": 2.3, "combined": 3.44, "level": "A", "title": "电池产业链盘初大幅拉升，国轩高科等股涨停", "ctime": 1775785258, "volume": 826201.0, "amount": 553817.0}, {"code": "300254", "name": "仟源医药", "price": 12.01, "change_pct": 6.28, "streak": 0, "news_score": 2.3, "combined": 3.4, "level": "A", "title": "创新药板块短线拉升，哈三联直线涨停", "ctime": 1775789026, "volume": 167371.0, "amount": 19821.0}, {"code": "300145", "name": "南方泵业", "price": 5.1, "change_pct": 12.58, "streak": 0, "news_score": 1.6, "combined": 3.37, "level": "A", "title": "液冷服务器板块震荡走高，英维克触及涨停", "ctime": 1775789709, "volume": 1907921.0, "amount": 94453.0}, {"code": "300814", "name": "中富电路", "price": 96.17, "change_pct": 2.06, "streak": 0, "news_score": 3.3, "combined": 3.34, "level": "A", "title": "CPO等算力硬件股再度拉升，新易盛盘中创新高", "ctime": 1775786880, "volume": 62171.0, "amount": 60021.0}, {"code": "001283", "name": "豪鹏科技", "price": 69.91, "change_pct": 8.05, "streak": 1, "news_score": 2.3, "combined": 3.3, "level": "A", "title": "电池产业链盘初大幅拉升，国轩高科等股涨停", "ctime": 1775785258, "volume": 88455.0, "amount": 62040.0}, {"code": "605006", "name": "山东玻纤", "price": 10.12, "change_pct": 10.0, "streak": 0, "news_score": 2.0, "combined": 3.24, "level": "A", "title": "玻璃玻纤板块拉升，山东玻纤涨停", "ctime": 1775785802, "volume": 439666.0, "amount": 43477.0}, {"code": "002900", "name": "哈三联", "price": 12.39, "change_pct": 5.45, "streak": 0, "news_score": 2.3, "combined": 3.23, "level": "A", "title": "创新药板块短线拉升，哈三联直线涨停", "ctime": 1775789026, "volume": 163113.0, "amount": 20345.0}, {"code": "301075", "name": "多瑞医药", "price": 66.72, "change_pct": 5.4, "streak": 0, "news_score": 2.3, "combined": 3.22, "level": "A", "title": "创新药板块短线拉升，哈三联直线涨停", "ctime": 1775789026, "volume": 12683.0, "amount": 8429.0}, {"code": "600103", "name": "青山纸业", "price": 3.91, "change_pct": 10.14, "streak": 0, "news_score": 2.0, "combined": 3.19, "level": "A", "title": "造纸板块短线拉升，青山纸业涨停", "ctime": 1775785153, "volume": 777999.0, "amount": 30420.0}, {"code": "600482", "name": "中国动力", "price": 40.44, "change_pct": 10.01, "streak": 0, "news_score": 2.0, "combined": 3.13, "level": "A", "title": "中船系盘初拉升，中国动力涨停", "ctime": 1775784739, "volume": 280582.0, "amount": 113231.0}];
+const sectorsData = [{"name": "板块", "count": 22, "score": 29.5, "etf": ""}, {"name": "消费", "count": 17, "score": 13.9, "etf": "159928"}, {"name": "储能", "count": 8, "score": 16.6, "etf": "159566"}, {"name": "AI", "count": 16, "score": 8.9, "etf": "515070"}, {"name": "行业", "count": 7, "score": 11.6, "etf": ""}, {"name": "ETF", "count": 13, "score": 8.5, "etf": ""}, {"name": "新能源", "count": 4, "score": 10.9, "etf": "516160"}, {"name": "芯片", "count": 6, "score": 7.5, "etf": "159995"}, {"name": "人工智能", "count": 7, "score": 6.5, "etf": "515070"}, {"name": "锂电", "count": 3, "score": 8.1, "etf": "159840"}];
+const newsData = [{"id": "4209591", "title": "CPO等算力硬件股再度拉升，新易盛盘中创新高", "digest": "CPO等算力硬件股再度拉升，沃格光电触及涨停，新易盛盘中创新高，生益电子、中际旭创、中富电路纷纷上扬。", "ctime": 1775786880, "channel": "全部", "score": 3.3, "level": "A", "stocks": [{"code": "300308", "name": "中际旭创"}, {"code": "688183", "name": "生益电子"}, {"code": "603773", "name": "沃格光电"}, {"code": "300814", "name": "中富电路"}, {"code": "300502", "name": "新易盛"}], "sectors": [], "bull_count": 3, "bear_count": 0}, {"id": "4209621", "title": "今年第二批625亿元超长期特别国债支持消费品以旧换新资金已于近日下达", "digest": "近日，国家发展改革委会同财政部，及时向地方下达了今年第二批625亿元超长期特别国债资金，支持地方继续平稳有序实施消费品以旧换新政策。下一步，有关部门将继续指导地方，合理把握工作节奏，优化完善资金使用计划，加强资金监管，规范补贴申领和资金审核", "ctime": 1775787261, "channel": "全部", "score": 2.5, "level": "A", "stocks": [], "sectors": ["消费"], "bull_count": 1, "bear_count": 0}, {"id": "4209793", "title": "创新药板块短线拉升，哈三联直线涨停", "digest": "创新药板块短线拉升，哈三联直线涨停，昊帆生物、多瑞医药、仟源医药、海思科跟涨。", "ctime": 1775789026, "channel": "全部", "score": 2.3, "level": "B", "stocks": [{"code": "300254", "name": "仟源医药"}, {"code": "002653", "name": "海思科"}, {"code": "002900", "name": "哈三联"}, {"code": "301393", "name": "昊帆生物"}, {"code": "301075", "name": "多瑞医药"}], "sectors": ["板块", "医药"], "bull_count": 2, "bear_count": 0}, {"id": "4209213", "title": "中国央行：今日开展20亿元7天逆回购操作", "digest": "中国央行：今日开展20亿元7天逆回购操作，投标量20亿元，中标量20亿元，操作利率为1.40%，与此前持平。同花顺iFinD数据显示，今日有10亿元7天期逆回购到期。", "ctime": 1775784092, "channel": "全部", "score": 2.5, "level": "A", "stocks": [], "sectors": [], "bull_count": 2, "bear_count": 0}, {"id": "4209195", "title": "俄副外长：俄罗斯不会抛弃古巴", "digest": "据塔斯社10日报道，正在古巴访问的俄罗斯副外长里亚布科夫说，古巴是俄罗斯的优先事项之一，俄罗斯不会背叛和抛弃古巴。 据报道，里亚布科夫表示，他与古巴方面的磋商非常重要且富有成效，俄方将继续与古巴开展合作。他强调，“无论美国怎么说，俄罗斯都不", "ctime": 1775783910, "channel": "全部", "score": 2.5, "level": "A", "stocks": [], "sectors": [], "bull_count": 2, "bear_count": 0}, {"id": "4209837", "title": "沙特能源设施近期多次遭袭致多人伤亡", "digest": "沙特阿拉伯能源部9日发表声明说，该国境内的重要能源设施近期遭受多次袭击，袭击造成1名沙特人死亡，另有7名沙特人受伤，并对该国能源出口造成直接影响。 声明说，遭袭的能源设施包括石油和天然气的生产、运输和炼化设施，以及位于首都利雅得、东部省和延", "ctime": 1775789540, "channel": "全部", "score": 2.0, "level": "B", "stocks": [], "sectors": ["消费", "电力"], "bull_count": 2, "bear_count": 0}, {"id": "4209405", "title": "电池产业链盘初大幅拉升，国轩高科等股涨停", "digest": "电池产业链盘初大幅拉升，国轩高科、豪鹏科技、信宇人涨停，欣旺达涨超10%，天华新能、石大胜华、鹏辉能源、力佳科技、南都电源跟涨。相关ETF方面，电池ETF广发（159755）涨3.04%，成交额8128.55万元，储能电池ETF易方达（15", "ctime": 1775785258, "channel": "全部", "score": 2.3, "level": "B", "stocks": [{"code": "300068", "name": "南都电源"}, {"code": "603026", "name": "石大胜华"}, {"code": "688573", "name": "信宇人"}, {"code": "300207", "name": "欣旺达"}, {"code": "001283", "name": "豪鹏科技"}, {"code": "300438", "name": "鹏辉能源"}, {"code": "300390", "name": "天华新能"}, {"code": "920237", "name": "力佳科技"}], "sectors": ["ETF", "储能"], "bull_count": 2, "bear_count": 0}, {"id": "4209801", "title": "商务部：一季度货物贸易进出口预计如期实现良好开局", "digest": "4月10日，商务部对外贸易司司长王志华表示，今年以来，广大外贸企业积极拓市场、稳订单、谋创新、树品牌，为中国外贸增添了更多韧性和活力。根据海关统计数据，今年前两个月，中国货物贸易进出口规模和增速均为历史同期较好水平，预计一季度也将如期实现良", "ctime": 1775789062, "channel": "全部", "score": 2.0, "level": "B", "stocks": [], "sectors": [], "bull_count": 2, "bear_count": 0}, {"id": "4209757", "title": "文化传媒板块短线拉升，出版传媒触及涨停", "digest": "文化传媒板块短线拉升，出版传媒触及涨停，中信出版涨超8%，中原传媒、世纪天鸿、川网传媒跟涨。", "ctime": 1775788594, "channel": "全部", "score": 2.0, "level": "B", "stocks": [{"code": "000719", "name": "中原传媒"}, {"code": "601999", "name": "出版传媒"}, {"code": "300788", "name": "中信出版"}, {"code": "300654", "name": "世纪天鸿"}, {"code": "300987", "name": "川网传媒"}], "sectors": ["板块", "传媒"], "bull_count": 2, "bear_count": 0}, {"id": "4209709", "title": "旅游及酒店板块短线拉升，西藏旅游涨停", "digest": "旅游及酒店板块短线拉升，西藏旅游涨停，君亭酒店、华天酒店、金陵饭店、首旅酒店、锦江酒店跟涨。相关ETF方面，旅游ETF富国（159766）涨1.02%，成交额6973.81万元，旅游ETF华夏（562510）涨1.16%，成交额1715.2", "ctime": 1775788160, "channel": "全部", "score": 2.0, "level": "B", "stocks": [{"code": "600754", "name": "锦江酒店"}, {"code": "600258", "name": "首旅酒店"}, {"code": "601007", "name": "金陵饭店"}, {"code": "000428", "name": "华天酒店"}, {"code": "600749", "name": "西藏旅游"}, {"code": "301073", "name": "君亭酒店"}], "sectors": ["板块", "ETF", "旅游"], "bull_count": 2, "bear_count": 0}, {"id": "4209551", "title": "创业板指突破前期高点，创2021年12月以来新高", "digest": "创业板指突破前期高点，创2021年12月以来新高。", "ctime": 1775786536, "channel": "全部", "score": 2.0, "level": "B", "stocks": [], "sectors": [], "bull_count": 2, "bear_count": 0}, {"id": "4209487", "title": "玻璃玻纤板块拉升，山东玻纤涨停", "digest": "玻璃玻纤板块拉升，山东玻纤涨停，国际复材、长海股份、中材科技、中国巨石、九鼎新材跟涨。", "ctime": 1775785802, "channel": "全部", "score": 2.0, "level": "B", "stocks": [{"code": "605006", "name": "山东玻纤"}, {"code": "002080", "name": "中材科技"}, {"code": "300196", "name": "长海股份"}, {"code": "002201", "name": "九鼎新材"}, {"code": "600176", "name": "中国巨石"}, {"code": "301526", "name": "国际复材"}], "sectors": ["板块"], "bull_count": 2, "bear_count": 0}, {"id": "4209393", "title": "造纸板块短线拉升，青山纸业涨停", "digest": "造纸板块短线拉升，青山纸业涨停，松炀资源、民丰特纸、冠豪高新、民士达、森林包装等跟涨。", "ctime": 1775785153, "channel": "全部", "score": 2.0, "level": "B", "stocks": [{"code": "605500", "name": "森林包装"}, {"code": "920394", "name": "民士达"}, {"code": "603863", "name": "松炀资源"}, {"code": "600103", "name": "青山纸业"}, {"code": "600235", "name": "民丰特纸"}, {"code": "600433", "name": "冠豪高新"}], "sectors": ["板块"], "bull_count": 2, "bear_count": 0}, {"id": "4209357", "title": "港股券商股盘初拉升，中信证券涨超8%", "digest": "港股券商股盘初拉升，中信证券涨超8%，国联民生、广发证券涨超5%，中信建投证券、国泰海通、中金公司纷纷拉升。消息面上，中信证券一季度赚102亿，同比增长近55%。", "ctime": 1775784991, "channel": "全部", "score": 2.0, "level": "B", "stocks": [], "sectors": ["券商"], "bull_count": 2, "bear_count": 0}, {"id": "4209305", "title": "中船系盘初拉升，中国动力涨停", "digest": "中船系盘初拉升，中国动力涨停，中船特气、中国船舶、中船防务、昆船智能跟涨。", "ctime": 1775784739, "channel": "全部", "score": 2.0, "level": "B", "stocks": [{"code": "301311", "name": "昆船智能"}, {"code": "600150", "name": "中国船舶"}, {"code": "600482", "name": "中国动力"}, {"code": "600685", "name": "中船防务"}, {"code": "688146", "name": "中船特气"}], "sectors": [], "bull_count": 2, "bear_count": 0}, {"id": "4209163", "title": "优化中小企业发展环境工作交流活动在海口市举行", "digest": "2026年4月9日，优化中小企业发展环境工作交流活动在海口市举行。工业和信息化部党组成员、副部长柯吉欣，海南省副省长杨国强出席活动并致辞。本次交流活动旨在深入贯彻落实党中央、国务院关于促进中小企业高质量发展的决策部署，总结推广各地优化中小企", "ctime": 1775783660, "channel": "全部", "score": 2.0, "level": "B", "stocks": [], "sectors": [], "bull_count": 0, "bear_count": 0}, {"id": "4209849", "title": "液冷服务器板块震荡走高，英维克触及涨停", "digest": "液冷服务器板块震荡走高，英维克触及涨停，南方泵业涨超10%，圣阳股份、申菱环境、曙光数创涨幅居前。消息面上，谷歌宣布将2026年TPU芯片出货量目标大幅上调50%至600万颗，新一代TPU v7单芯片功耗高达980W，要求100%采用液冷散", "ctime": 1775789709, "channel": "全部", "score": 1.6, "level": "B", "stocks": [{"code": "300145", "name": "南方泵业"}, {"code": "920808", "name": "曙光数创"}, {"code": "301018", "name": "申菱环境"}, {"code": "002837", "name": "英维克"}, {"code": "002580", "name": "圣阳股份"}], "sectors": ["板块", "芯片"], "bull_count": 1, "bear_count": 0}, {"id": "4209945", "title": "中国石化设计首个海底数据中心项目启动", "digest": "4月7日，石油工程建设公司石油工程设计公司与全球首家商用海底数据中心服务提供商上海海兰云科技有限公司签约，正式启动由中国石化设计的首个海底数据中心项目。该项目创新构建“海上风电+海底算力”协同模式，依托海上风电直接供电，大幅降低电力远距离输", "ctime": 1775790856, "channel": "全部", "score": 1.3, "level": "C", "stocks": [{"code": "600028", "name": "中国石化"}], "sectors": ["电力"], "bull_count": 1, "bear_count": 0}, {"id": "4209523", "title": "阿联酋与英国、欧盟官员就地区局势交换意见", "digest": "阿联酋9日分别与英国和欧盟官员就中东地区局势及其影响进行沟通，强调当前地区安全形势严峻，呼吁加强国际合作，推动实现地区稳定与持久和平。(新华社)", "ctime": 1775786221, "channel": "全部", "score": 1.5, "level": "B", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209787", "title": "普京：发展火箭航天综合体是俄绝对优先事项之一", "digest": "俄罗斯总统普京9日致信首届俄罗斯太空论坛表示，发展火箭航天综合体，增强科研、人才和技术实力，是俄罗斯绝对优先事项之一。 据克里姆林宫网站消息，普京在致信中说，要联合政府、企业和科研团队力量，应对迫切需要解决的挑战，包括完善产业生产基地和地面", "ctime": 1775788948, "channel": "全部", "score": 1.3, "level": "C", "stocks": [], "sectors": ["卫星"], "bull_count": 1, "bear_count": 0}, {"id": "4209241", "title": "内蒙古本地股集体高开，内蒙新华、欧晶科技涨停", "digest": "内蒙古本地股集体高开，内蒙新华、欧晶科技涨停，蒙草生态、骑士乳业涨超10%，大唐药业、华能蒙电、鄂尔多斯纷纷高开。消息面上，国务院印发《中国（内蒙古） 自由贸易试验区总体方案》。", "ctime": 1775784422, "channel": "全部", "score": 1.5, "level": "B", "stocks": [{"code": "600863", "name": "华能蒙电"}, {"code": "001269", "name": "欧晶科技"}, {"code": "300355", "name": "蒙草生态"}, {"code": "920433", "name": "大唐药业"}, {"code": "920786", "name": "骑士乳业"}, {"code": "600295", "name": "鄂尔多斯"}, {"code": "603230", "name": "内蒙新华"}], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4206123", "title": "中矿资源：一季度净利同比预增271%-308% 锂盐产品市场价格同比显著增长", "digest": "中矿资源公告，预计2026年第一季度净利润为5亿元-5.5亿元，同比增长270.97%-308.07%。2026年一季度，公司预计归属于上市公司股东的净利润较上年同期实现较大增幅增长，主要变动原因如下：1受下游储能、动力电池需求增长推动，锂", "ctime": 1775734197, "channel": "重要", "score": 3.9, "level": "A", "stocks": [{"code": "002738", "name": "中矿资源"}], "sectors": ["新能源", "锂电", "储能"], "bull_count": 3, "bear_count": 0}, {"id": "4205751", "title": "全志科技：预计2026年第一季度净利润同比增长112.99%～140.30%", "digest": "全志科技公告，预计2026年第一季度归属于上市公司股东的净利润为1.95亿元～2.2亿元，比上年同期增长112.99%～140.30%。扣除非经常性损益后的净利润为1.9亿元～2.16亿元，比上年同期增长238.21%～284.49%。报告", "ctime": 1775730531, "channel": "重要", "score": 4.0, "level": "S", "stocks": [{"code": "300458", "name": "全志科技"}], "sectors": [], "bull_count": 4, "bear_count": 0}, {"id": "4209125", "title": "江苏：要深化人工智能赋能 支持企业开发应用行业垂类大模型", "digest": "4月9日，江苏省省长刘小涛主持召开今年第四期政企恳谈会，围绕新型消费发展听取相关企业和行业协会意见建议。刘小涛强调，要精准对接企业需求，强化资金支持，创新金融产品，发挥基金作用，助力培育未来消费模式和爆款产品。要加速场景拓展应用，统筹盘活存", "ctime": 1775783248, "channel": "全部", "score": 1.4, "level": "C", "stocks": [], "sectors": ["行业", "基金", "人工智能", "消费"], "bull_count": 0, "bear_count": 0}, {"id": "4209327", "title": "储能板块盘初表现活跃，中恒电气2连板", "digest": "储能板块盘初表现活跃，中恒电气2连板，奥瑞金、新朋股份、德业股份、和胜股份涨停，欣旺达、豪鹏科技、科达制造、爱克股份跟涨。相关ETF方面，电池ETF广发（159755）涨1.11%，成交额1783.77万元，储能电池ETF易方达（15956", "ctime": 1775784848, "channel": "全部", "score": 1.3, "level": "C", "stocks": [{"code": "605117", "name": "德业股份"}, {"code": "002701", "name": "奥瑞金"}, {"code": "002328", "name": "新朋股份"}, {"code": "002824", "name": "和胜股份"}, {"code": "300207", "name": "欣旺达"}, {"code": "001283", "name": "豪鹏科技"}, {"code": "002364", "name": "中恒电气"}, {"code": "600499", "name": "科达制造"}], "sectors": ["板块", "行业", "ETF", "储能"], "bull_count": 1, "bear_count": 0}, {"id": "4209255", "title": "存储芯片板块高开，睿能科技涨停", "digest": "存储芯片板块高开，睿能科技涨停，德明利、普冉股份、佰维存储、澜起科技纷纷高开。消息面上，国际大厂三星电子年内已将DRAM合约价累计上调约160%，部分高端芯片的每克价格比黄金高出45.9%，主流内存芯片价格在本轮涨价周期中最高已上涨超600", "ctime": 1775784539, "channel": "全部", "score": 1.3, "level": "C", "stocks": [{"code": "603933", "name": "睿能科技"}, {"code": "688008", "name": "澜起科技"}, {"code": "688525", "name": "佰维存储"}, {"code": "688766", "name": "普冉股份"}, {"code": "001309", "name": "德明利"}], "sectors": ["板块", "芯片"], "bull_count": 1, "bear_count": 0}, {"id": "4209527", "title": "DeepSeek V4或将于4月下旬发布", "digest": "据多位知情人士向媒体透露，DeepSeek创始人梁文锋近日在内部沟通中透露，DeepSeek新一代旗舰大模型DeepSeekV4将于4月下旬正式发布。近期，DeepSeek网页端悄然上线了“快速模式”和“专家模式”两种交互模式，支持简洁搜索", "ctime": 1775786274, "channel": "全部", "score": 1.2, "level": "C", "stocks": [], "sectors": ["芯片", "AI"], "bull_count": 0, "bear_count": 0}, {"id": "4209959", "title": "亚马逊否认新一轮全球裁员传闻", "digest": "近日，有消息称亚马逊将在5月开启新一轮裁员，预计将裁员14000人，涉及部门多为核心业务部门，包括AWS云部门、零售业务和人力资源部门等，中国区部分团队甚至可能被整体裁撤。对此，4月10日，亚马逊方面对记者表示，该消息并不属实。今年年初，亚", "ctime": 1775791070, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209155", "title": "韩美半导体将推出第二代混合键合机原型", "digest": "韩美半导体表示，公司将于年内推出用于下一代HBM生产的“第二代混合键合机”原型机，并开始与客户合作。此外，公司还计划于明年上半年启动其混合键合机工厂的运营。（科创板日报）", "ctime": 1775783600, "channel": "全部", "score": 1.3, "level": "C", "stocks": [], "sectors": ["半导体"], "bull_count": 1, "bear_count": 0}, {"id": "4209931", "title": "今年一季度我国完成水利建设投资2070亿元", "digest": "记者今天从水利部了解到，今年一季度，我国水利基础设施建设取得积极成效，新开工重大水利工程15项，超去年同期，完成水利建设投资2070亿元，同比增长4.1%，实现良好开局。(央视新闻)", "ctime": 1775790736, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209927", "title": "沪深京三市成交额超1.4万亿元，较上日此时放量677亿元", "digest": "据同花顺iFinD数据，沪深京三市成交额超1.4万亿元，较上日此时放量677亿元，预计全天成交金额约2.2万亿元。截至目前，沪市成交额5731亿元，深市成交额8182亿元，北证50成交额93亿元。", "ctime": 1775790628, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209915", "title": "事关自贸试验区建设 国新办今日下午3时将举行吹风会", "digest": "国务院日前印发《中国（内蒙古）自由贸易试验区总体方案》，并于昨晚正式对外公布。至此我国自贸试验区扩围至23个。今天（4月10日）下午，国务院新闻办公室将举行政策例行吹风会，商务部、内蒙古自治区相关负责人介绍《方案》有关情况。(央视新闻)", "ctime": 1775790482, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 0, "bear_count": 0}, {"id": "4209869", "title": "伊朗副外长：美国“必须在战争与停火之间作出选择”", "digest": "伊朗副外长赛义德·哈提卜扎德9日在接受英国广播公司采访时表示，以色列8日对黎巴嫩发动的空袭“严重违反”有关停火安排。停火安排应涵盖黎巴嫩，但美国和以色列对此持不同说法，美国“必须在战争与停火之间作出选择”。 哈提卜扎德说，伊朗已于8日晚些时", "ctime": 1775789936, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209867", "title": "SK海力士新厂M15X扩大最先进DRAM的量产规模", "digest": "SK海力士将于近日在位于韩国清州的新厂M15X正式扩大最先进DRAM的量产规模。业界预测，M15X将成为SK海力士2027年前持续扩大高带宽存储器（HBM）产量的核心据点。(科创板日报)", "ctime": 1775789923, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4205273", "title": "国务院印发《中国（内蒙古）自由贸易试验区总体方案》", "digest": "日前，国务院印发《中国（内蒙古）自由贸易试验区总体方案》（以下简称《总体方案》）。《总体方案》指出，建立内蒙古自贸试验区是党中央、国务院作出的重大决策，是进一步全面深化改革、推进高水平对外开放、推动高质量发展的重要战略举措。要以习近平新时代", "ctime": 1775725273, "channel": "重要", "score": 3.5, "level": "A", "stocks": [], "sectors": [], "bull_count": 3, "bear_count": 0}, {"id": "4209783", "title": "SBTI人格测试蹿红，相关视频已超百万播放量", "digest": "最近，SBTI人格测试在网络上迅速蹿红，成为社交平台上的热门话题，大量网友纷纷参与测试并在朋友圈分享结果，形成刷屏之势。据悉，SBTI作者为蛆肉儿串儿，目前该视频已发布23小时，播放量已达165.9万。企查查APP显示，SBTI已被申请注册", "ctime": 1775788913, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209775", "title": "沪深京三市成交额超1.2万亿元，较上日此时放量440亿元", "digest": "据同花顺iFinD数据，沪深京三市成交额超1.2万亿元，较上日此时放量440亿元，预计全天成交金额约2.2万亿元。截至目前，沪市成交额4918亿元，深市成交额7004亿元，北证50成交额81亿元。", "ctime": 1775788806, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209759", "title": "维也纳国际能源与气候论坛呼吁能源、产业与气候协同行动", "digest": "维也纳国际能源与气候论坛9日开幕。在全球不确定性加剧、能源危机持续的背景下，与会者呼吁加快能源转型、推动绿色工业化、增强气候韧性并促进共同繁荣。 联合国工业发展组织总干事穆勒在开幕式上表示，本次论坛的召开正值地缘政治动荡、冲突不断、经济前景", "ctime": 1775788609, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209659", "title": "沪深京三市成交额超1万亿元，较上日此时放量172亿元", "digest": "据同花顺iFinD数据，沪深京三市成交额超1万亿元，较上日此时放量172亿元，预计全天成交金额约2.2万亿元。截至目前，沪市成交额4081亿元，深市成交额5853亿元，北证50成交额69亿元。", "ctime": 1775787588, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209603", "title": "俄驻英使馆反驳英方涉俄潜艇指控", "digest": "俄罗斯驻英国大使馆9日在社交媒体发表声明，质疑并反驳英国国防大臣约翰·希利有关俄潜艇在北大西洋活动的说法，称其相关表态“既无法令人相信，也无从核实”。 声明说，希利当天早些时候称英国在北大西洋中立水域“击退”一艘俄罗斯潜艇“入侵”，这一说法", "ctime": 1775787043, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209515", "title": "产业链求证获悉，苹果首款折叠屏手机试产顺利", "digest": "4月9日，澎湃新闻记者从产业链求证获悉，苹果首款折叠屏手机试产顺利，并没有出现大问题，应该也不会导致延后发布。“整个折叠屏方案之前都论证了好几年了，苹果在外观上都是非常保守的，采用都是成熟的方案，没有什么大问题。”这位产业链人士表示。4月7", "ctime": 1775786196, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209481", "title": "证券、期货等大金融板块盘初走高，南华期货涨停", "digest": "证券、期货等大金融板块盘初走高，南华期货涨停，中信证券涨超7%，东方财富、广发证券、瑞达期货、越秀资本跟涨。", "ctime": 1775785704, "channel": "全部", "score": 1.0, "level": "C", "stocks": [{"code": "300059", "name": "东方财富"}, {"code": "600030", "name": "中信证券"}, {"code": "603093", "name": "南华期货"}, {"code": "000776", "name": "广发证券"}, {"code": "002961", "name": "瑞达期货"}, {"code": "000987", "name": "越秀资本"}], "sectors": ["板块"], "bull_count": 1, "bear_count": 0}, {"id": "4209365", "title": "张雪机车业务新增货物进出口", "digest": "2026年4月，摩托车品牌“张雪机车”创始人张雪因带领中国品牌首次在世界超级摩托车锦标赛（WSBK）夺冠而成为全网焦点。企查查APP显示，近日，重庆张雪机车工业有限公司经营范围发生变更，新增货物进出口业务。信息显示，该公司成立于2024年4", "ctime": 1775785046, "channel": "全部", "score": 1.0, "level": "C", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4205989", "title": "工业和信息化部等四部门召开动力及储能电池行业企业座谈会", "digest": "工业和信息化部、国家发展改革委、市场监管总局、国家能源局相关司局4月9日联合召开动力及储能电池行业企业座谈会，部署规范产业竞争秩序相关工作。会议强调，要深入贯彻落实习近平总书记关于治理锂电池行业“内卷式”竞争的重要指示批示精神，认真落实党中", "ctime": 1775732825, "channel": "重要", "score": 2.6, "level": "A", "stocks": [], "sectors": ["行业", "锂电", "储能"], "bull_count": 1, "bear_count": 0}, {"id": "4209239", "title": "统联精密等成立智能科技公司 含AI及机器人业务", "digest": "企查查APP显示，近日，上海联晟嘉智能科技有限公司成立，注册资本1000万元，经营范围包含人工智能基础软件开发；人工智能理论与算法软件开发；人工智能应用软件开发；智能机器人销售；智能机器人的研发等。企查查股权穿透显示，该公司由统联精密等共同", "ctime": 1775784412, "channel": "全部", "score": 0.9, "level": "C", "stocks": [{"code": "688210", "name": "统联精密"}], "sectors": ["AI", "人工智能", "机器人"], "bull_count": 0, "bear_count": 0}, {"id": "4207075", "title": "长电科技：2025年净利润15.65亿元，同比下降2.75%", "digest": "长电科技公告，2025年营业收入388.71亿元，同比增长8.09%。净利润15.65亿元，同比下降2.75%。公司拟以总股本17.89亿股为基数，向全体股东每10股派发现金红利1元（含税），共分配红利1.79亿元（含税）。2025年度，公", "ctime": 1775744933, "channel": "重要", "score": 2.0, "level": "B", "stocks": [{"code": "600584", "name": "长电科技"}], "sectors": [], "bull_count": 2, "bear_count": 0}, {"id": "4206477", "title": "美国2月个人消费支出核心价格指数（PCE）环比增长0.4%", "digest": "美国2月个人消费支出核心价格指数（PCE）环比增长0.4%，预估为0.4%；同比增长3.0%，预估为3.0%。", "ctime": 1775737845, "channel": "重要", "score": 2.0, "level": "B", "stocks": [], "sectors": ["指数", "消费"], "bull_count": 2, "bear_count": 0}, {"id": "4204167", "title": "液冷服务器板块午后再度拉升，圣阳股份、大元泵业涨停", "digest": "液冷服务器板块午后再度拉升，圣阳股份、大元泵业涨停，胜蓝股份、奕东电子、川环科技涨超10%，飞龙股份、博杰股份、新朋股份此前涨停。消息面上，谷歌宣布将2026年TPU芯片出货量目标大幅上调50%至600万颗，新一代TPU v7单芯片功耗高达", "ctime": 1775713508, "channel": "重要", "score": 2.6, "level": "A", "stocks": [{"code": "300547", "name": "川环科技"}, {"code": "300843", "name": "胜蓝股份"}, {"code": "301123", "name": "奕东电子"}, {"code": "603757", "name": "大元泵业"}, {"code": "002975", "name": "博杰股份"}, {"code": "002536", "name": "飞龙股份"}, {"code": "002328", "name": "新朋股份"}, {"code": "002580", "name": "圣阳股份"}], "sectors": ["板块", "芯片"], "bull_count": 2, "bear_count": 0}, {"id": "4209115", "title": "1-3月全国期货市场累计成交额同比增长58.43%", "digest": "中国期货业协会今天（4月10日）公布的数据显示，今年一季度，我国期货市场保持着极高的活跃度，持续为提升产业链供应链韧性、服务实体经济高质量发展注入动能。数据显示，1-3月全国期货市场累计成交量为26.01亿手，累计成交额为256.71万亿元", "ctime": 1775783056, "channel": "全部", "score": 0.8, "level": "C", "stocks": [], "sectors": ["板块", "新能源", "化工"], "bull_count": 2, "bear_count": 1}, {"id": "4206095", "title": "财政部、交通运输部：自2026年起用3年左右时间集中力量支持30个左右城市（群）实施新一轮国家综合货运枢纽补链强链提升行动", "digest": "财政部、交通运输部发布关于支持新一轮国家综合货运枢纽补链强链提升行动的通知。通知指出，自2026年起，用3年左右时间集中力量支持30个左右城市（群）实施新一轮国家综合货运枢纽补链强链提升行动，聚焦国家综合立体交通网“6轴7廊8通道”范围，以", "ctime": 1775733675, "channel": "重要", "score": 2.0, "level": "B", "stocks": [], "sectors": [], "bull_count": 1, "bear_count": 0}, {"id": "4209947", "title": "联想集团收购高端存储公司infinidat", "digest": "联想集团已完成对全球高端企业级存储解决方案提供商Infinidat的收购。交易收官后，Infinidat将并表进入联想集团的ISG（基础设施方案业务集团）板块。这笔交易的具体金额未对外披露。联想集团表示，通过整合 Infinidat，将明显", "ctime": 1775790903, "channel": "全部", "score": 0.6, "level": "C", "stocks": [], "sectors": ["板块", "行业", "人工智能", "储能"], "bull_count": 0, "bear_count": 0}, {"id": "4206051", "title": "中矿资源：2025年净利润4.58亿元，同比下降39.54%", "digest": "中矿资源公告，2025年营业收入65.45亿元，同比增长22.02%。净利润4.58亿元，同比下降39.54%。公司拟向全体股东每10股派发现金红利5元（含税）。", "ctime": 1775733106, "channel": "重要", "score": 2.0, "level": "B", "stocks": [{"code": "002738", "name": "中矿资源"}], "sectors": [], "bull_count": 2, "bear_count": 0}, {"id": "4205943", "title": "中钨高新：预计2026年一季度净利润为9亿元–9.5亿元", "digest": "中钨高新公告，预计2026年第一季度净利润为9亿元至9.5亿元，比上年同期增长256%至276%。业绩增长主要得益于钨原料市场供给偏紧、下游需求旺盛等因素，钨原料价格大幅上涨，销量同步增长，公司实现价格传导，叠加工程机械、高端制造下游行业需", "ctime": 1775732528, "channel": "重要", "score": 2.0, "level": "B", "stocks": [{"code": "000657", "name": "中钨高新"}], "sectors": ["行业"], "bull_count": 2, "bear_count": 0}, {"id": "4205803", "title": "菱电电控：2025年净利润1.36亿元，同比增长750.56%", "digest": "菱电电控公告，2025年实现营业收入11.94亿元，同比下降0.17%；净利润1.36亿元，同比增长750.56%。公司2025年度利润分配预案为：向全体股东每10股派发现金红利人民币8元（含税），预计派发现金红利总额为人民币4215.64", "ctime": 1775730788, "channel": "重要", "score": 2.0, "level": "B", "stocks": [{"code": "688667", "name": "菱电电控"}], "sectors": [], "bull_count": 2, "bear_count": 0}, {"id": "4209799", "title": "云深处在河北雄安成立新公司", "digest": "企查查APP显示，近日，河北雄安云深处科技有限公司成立，经营范围包含智能机器人销售；智能机器人的研发；人工智能硬件销售；工业机器人安装、维修；服务消费机器人销售等。企查查股权穿透显示，该公司由杭州云深处科技股份有限公司全资持股。（人民财讯）", "ctime": 1775789045, "channel": "全部", "score": 0.6, "level": "C", "stocks": [], "sectors": ["人工智能", "消费", "机器人"], "bull_count": 0, "bear_count": 0}, {"id": "4206231", "title": "双杰电气：取消吉尔吉斯光伏项目投资", "digest": "双杰电气公告，公司于2025年8月25日审议通过设立香港全资子公司并投资吉尔吉斯光伏项目的议案。但因海外市场环境、政策及项目实施条件变化，2026年4月9日董事会决议取消原投资计划。取消投资不会对公司生产经营及财务状况产生重大不利影响。同时", "ctime": 1775735437, "channel": "重要", "score": 1.8, "level": "B", "stocks": [{"code": "300444", "name": "双杰电气"}], "sectors": ["光伏"], "bull_count": 1, "bear_count": 0}, {"id": "4205175", "title": "中信证券：第一季度净利润为102.16亿元，同比增长54.60%", "digest": "中信证券发布业绩快报，第一季度营业收入为231.55亿元，同比增长40.91%。净利润为102.16亿元，同比增长54.60%。2026年一季度，资本市场保持良好发展态势，交易活跃度维持高位水平，公司积极把握市场机会，各项业务协同发力、稳步", "ctime": 1775723828, "channel": "重要", "score": 2.0, "level": "B", "stocks": [{"code": "600030", "name": "中信证券"}], "sectors": [], "bull_count": 2, "bear_count": 0}, {"id": "4209675", "title": "阿里AI视频大模型HappyHorse预计一周后对外发布", "digest": "从知情人士处获悉，HappyHorse已内部上架阿里百炼，预计一周后对外发布。4月8日，HappyHorse1.0作为黑马以1333 Elo分登顶Artificial Analysis视频竞技场排行榜，对OVI 1.1的胜率为80%，对LT", "ctime": 1775787716, "channel": "全部", "score": 0.6, "level": "C", "stocks": [], "sectors": ["AI"], "bull_count": 0, "bear_count": 0}, {"id": "4209427", "title": "多模态大模型HappyHorse或由阿里团队研发", "digest": "近期引发热议的多模态大模型HappyHorse，已在海外社交平台注册账号，其首位关注者为阿里巴巴集团。此前有消息称，HappyHorse是来自阿里旗下淘天集团未来生活实验室张迪领导的团队所研发，目前未来生活实验室已从淘天集团独立，归属于AT", "ctime": 1775785306, "channel": "全部", "score": 0.6, "level": "C", "stocks": [], "sectors": ["AI"], "bull_count": 0, "bear_count": 0}, {"id": "4203957", "title": "稀土永磁板块午后再度拉升，英洛华直线涨停", "digest": "稀土永磁板块午后再度拉升，英洛华直线涨停，华宏科技此前涨停，九菱科技、华新环保、新莱福、中稀有色、中科磁业跟涨。相关ETF方面，稀土ETF富国（159713）涨0.65%，成交额8745.32万元，稀土ETF易方达（159715）涨0.63", "ctime": 1775711122, "channel": "重要", "score": 2.0, "level": "B", "stocks": [{"code": "301323", "name": "新莱福"}, {"code": "301265", "name": "华新环保"}, {"code": "600259", "name": "中稀有色"}, {"code": "002645", "name": "华宏科技"}, {"code": "301141", "name": "中科磁业"}, {"code": "920505", "name": "九菱科技"}, {"code": "000795", "name": "英洛华"}], "sectors": ["板块", "ETF", "有色"], "bull_count": 2, "bear_count": 0}];
+
+// ─── 渲染 Hot7 ───
+(function(){
+  const el = document.getElementById('hot7-list');
+  let html = '';
+  hot7Data.forEach((h, i) => {
+    const pctClass = h.change_pct >= 0 ? 'text-red-400' : 'text-green-400';
+    const pctStr = h.change_pct >= 0 ? '+' + h.change_pct.toFixed(2) + '%' : h.change_pct.toFixed(2) + '%';
+    const streakBadge = h.streak > 0 ? `<span class="tag tag-s ml-1">${h.streak}连阳</span>` : '';
+    html += `
+    <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all">
+      <div class="hot-rank" style="opacity:${1 - i*0.08}">${i+1}</div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-sm">${h.name}</span>
+          <span class="mono text-xs text-slate-500">${h.code}</span>
+          ${streakBadge}
+        </div>
+        <div class="flex items-center gap-3 mt-1">
+          <span class="mono text-sm ${pctClass}">${h.price > 0 ? h.price.toFixed(2) : '--'}</span>
+          <span class="mono text-xs ${pctClass}">${pctStr}</span>
+          <span class="text-xs text-slate-500">提及${h.count}次</span>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="mono text-xs text-amber-400">评分 ${h.score}</div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html || '<div class="text-center text-slate-500 py-8">暂无数据</div>';
+})();
+
+// ─── 渲染精选 ───
+(function(){
+  const el = document.getElementById('picks-list');
+  let html = '';
+  picksData.forEach((p, i) => {
+    const pctClass = p.change_pct >= 0 ? 'text-red-400' : 'text-green-400';
+    const pctStr = p.change_pct >= 0 ? '+' + p.change_pct.toFixed(2) + '%' : p.change_pct.toFixed(2) + '%';
+    const tagClass = 'tag-' + p.level.toLowerCase();
+    const time = new Date(p.ctime * 1000);
+    const timeStr = time.getHours().toString().padStart(2,'0') + ':' + time.getMinutes().toString().padStart(2,'0');
+    html += `
+    <div class="p-3 rounded-lg hover:bg-white/5 transition-all border border-transparent hover:border-slate-700">
+      <div class="flex items-center justify-between mb-1">
+        <div class="flex items-center gap-2">
+          <span class="tag ${tagClass}">${p.level}</span>
+          <span class="font-bold text-sm">${p.name}</span>
+          <span class="mono text-xs text-slate-500">${p.code}</span>
+        </div>
+        <span class="mono text-xs text-slate-500">${timeStr}</span>
+      </div>
+      <div class="flex items-center gap-3 mb-1">
+        <span class="mono text-sm font-bold ${pctClass}">${p.price > 0 ? p.price.toFixed(2) : '--'}</span>
+        <span class="mono text-xs ${pctClass}">${pctStr}</span>
+        ${p.streak > 0 ? `<span class="text-xs text-amber-400">${p.streak}连阳</span>` : ''}
+        <span class="mono text-xs text-slate-500">评分${p.combined}</span>
+      </div>
+      <p class="text-xs text-slate-400 truncate">${p.title}</p>
+    </div>`;
+  });
+  el.innerHTML = html || '<div class="text-center text-slate-500 py-8">暂无数据</div>';
+})();
+
+// ─── 渲染板块 ───
+(function(){
+  const el = document.getElementById('sector-list');
+  let html = '';
+  sectorsData.forEach((s, i) => {
+    const scoreColor = s.score > 0 ? 'text-red-400' : s.score < 0 ? 'text-green-400' : 'text-slate-400';
+    html += `
+    <div class="flex items-center justify-between p-2 rounded hover:bg-white/5 transition-all">
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-500 mono w-5">${i+1}</span>
+        <span class="text-sm font-medium">${s.name}</span>
+        ${s.etf ? `<span class="mono text-xs text-cyan-400/60">${s.etf}</span>` : ''}
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-slate-500">x${s.count}</span>
+        <span class="mono text-xs ${scoreColor}">${s.score > 0 ? '+' : ''}${s.score}</span>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html || '<div class="text-center text-slate-500 py-4">暂无数据</div>';
+
+  // 板块图表
+  if(sectorsData.length > 0) {
+    const chart = echarts.init(document.getElementById('sector-chart'));
+    chart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#1e293b', borderColor: '#334155', textStyle: { color: '#e2e8f0', fontSize: 12 } },
+      grid: { left: 60, right: 20, top: 10, bottom: 24 },
+      xAxis: { type: 'value', axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#64748b', fontSize: 10 }, splitLine: { lineStyle: { color: '#1e293b' } } },
+      yAxis: { type: 'category', data: sectorsData.slice(0,8).map(s=>s.name).reverse(), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#94a3b8', fontSize: 11 } },
+      series: [{ type: 'bar', data: sectorsData.slice(0,8).map(s=>s.score).reverse(), barWidth: 16, itemStyle: { borderRadius: [0,4,4,0], color: function(p) { return p.data >= 0 ? new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#ef444480'},{offset:1,color:'#ef4444'}]) : new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#22c55e80'},{offset:1,color:'#22c55e'}]); } } }]
+    });
+    window.addEventListener('resize', () => chart.resize());
+  }
+})();
+
+// ─── 渲染新闻流 ───
+let currentFilter = 'all';
+function renderNews(filter) {
+  const el = document.getElementById('news-list');
+  let filtered = newsData;
+  if (filter === 'bull') filtered = newsData.filter(n => n.score > 0);
+  else if (filter === 'bear') filtered = newsData.filter(n => n.score < 0);
+
+  let html = '';
+  filtered.slice(0, 50).forEach(n => {
+    const cls = n.score > 1 ? 'bull' : n.score < -1 ? 'bear' : '';
+    const tagClass = 'tag-' + n.level.toLowerCase();
+    const time = new Date(n.ctime * 1000);
+    const timeStr = time.getHours().toString().padStart(2,'0') + ':' + time.getMinutes().toString().padStart(2,'0');
+    const stockTags = (n.stocks || []).slice(0,3).map(s => `<span class="text-xs text-cyan-400">${s.name}</span>`).join(' ');
+    html += `
+    <div class="news-item ${cls} py-2">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="tag ${tagClass}">${n.level}</span>
+        <span class="mono text-xs text-slate-500">${timeStr}</span>
+        <span class="text-xs text-slate-600">${n.channel}</span>
+      </div>
+      <p class="text-sm leading-relaxed mb-1">${n.title}</p>
+      <div class="flex items-center gap-2 flex-wrap">
+        ${stockTags}
+        ${n.sectors && n.sectors.length ? `<span class="text-xs text-purple-400">${n.sectors.slice(0,2).join(' ')}</span>` : ''}
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html || '<div class="text-center text-slate-500 py-8">暂无数据</div>';
+}
+function filterNews(f) {
+  currentFilter = f;
+  document.querySelectorAll('[id^="btn-"]').forEach(b => { b.className = 'tag tag-c hover:opacity-80 cursor-pointer'; });
+  const btnId = 'btn-' + f;
+  const btn = document.getElementById(btnId);
+  if(btn) btn.className = 'tag tag-s hover:opacity-80 cursor-pointer';
+  renderNews(f);
+}
+renderNews('all');
+</script>
+</body>
+</html>
